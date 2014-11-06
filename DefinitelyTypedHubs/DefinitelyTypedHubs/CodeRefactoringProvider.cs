@@ -34,6 +34,27 @@ namespace DefinitelyTypedHubs
                 return;
             }
 
+            // look for the base classes:
+            // See if any base class is Hub.
+            // Full name: Microsoft.AspNet.SignalR.Hub
+            var semanticModel = await context.Document.GetSemanticModelAsync(context.CancellationToken);
+            var typeInfo = semanticModel.GetDeclaredSymbol(typeDecl);
+
+            var parent = typeInfo.BaseType;
+            bool found = false;
+            // We want to find the string "NamedType Microsoft.AspNet.SignalR.Hub"
+            while ((parent.Name != "Hub") && (parent.Name != "Object"))
+            {
+                parent = parent.BaseType;
+                if ((parent.Name == "Hub") && 
+                    (parent.ContainingNamespace.ToString() == "Namespace Microsoft.AspNet.SignalR.Hub"))
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) return;
+
             // For any type declaration node, create a code action to reverse the identifier text.
             var action = CodeAction.Create("Generate Typescipt Typings", c => GenerateTypings(context.Document, typeDecl, c));
 
