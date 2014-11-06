@@ -28,20 +28,20 @@ namespace DefinitelyTypedHubs
             var node = root.FindNode(context.Span);
 
             // Only offer a refactoring if the selected node is a type declaration node.
-            var typeDecl = node as TypeDeclarationSyntax;
+            var typeDecl = node as ClassDeclarationSyntax;
             if (typeDecl == null)
             {
                 return;
             }
 
             // For any type declaration node, create a code action to reverse the identifier text.
-            var action = CodeAction.Create("Reverse type name", c => ReverseTypeNameAsync(context.Document, typeDecl, c));
+            var action = CodeAction.Create("Generate Typescipt Typings", c => GenerateTypings(context.Document, typeDecl, c));
 
             // Register this code action.
             context.RegisterRefactoring(action);
         }
 
-        private async Task<Solution> ReverseTypeNameAsync(Document document, TypeDeclarationSyntax typeDecl, CancellationToken cancellationToken)
+        private async Task<Solution> GenerateTypings(Document document, TypeDeclarationSyntax typeDecl, CancellationToken cancellationToken)
         {
             // Produce a reversed version of the type declaration's identifier token.
             var identifierToken = typeDecl.Identifier;
