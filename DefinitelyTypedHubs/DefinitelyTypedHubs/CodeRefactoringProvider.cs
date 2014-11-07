@@ -71,7 +71,11 @@ namespace DefinitelyTypedHubs
             var originalSolution = document.Project.Solution;
             var docInfo = DocumentInfo.Create(
                 DocumentId.CreateNewId(document.Project.Id),
-                "Scripts/typings/signalR/signalR.d.ts");
+                "signalR.d.ts",
+                new string[] { "Scripts", "typings", "signalR" },
+                SourceCodeKind.Regular,
+                TextLoader.From(TextAndVersion.Create(SourceText.From(signalRdefinitions),
+                VersionStamp.Default)));
             var updatedSolution = originalSolution.AddAdditionalDocument(docInfo);
             return updatedSolution;
         }
