@@ -10,6 +10,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Rename;
 using Microsoft.CodeAnalysis.Text;
+using System;
 
 namespace DefinitelyTypedHubs
 {
@@ -64,19 +65,29 @@ namespace DefinitelyTypedHubs
 
         private async Task<Solution> GenerateTypings(Document document, TypeDeclarationSyntax typeDecl, CancellationToken cancellationToken)
         {
-            // TODO: Create the specific code to generate the typings from the hub 
-            // definition
+            var originalSolution = document.Project.Solution;
+            // TODO: Generate the file for that one hub (I think a file per hub makes sense.)
+            string clientInterface = "interface I" + typeDecl.Identifier.ToString() + "Client {";
+            clientInterface += Environment.NewLine;
+            clientInterface += "}" + Environment.NewLine;
+            var docInfo = DocumentInfo.Create(
+                DocumentId.CreateNewId(document.Project.Id),
+                typeDecl.Identifier.ToString() + "Hub.d.ts",
+                new string[] { "Scripts", "typings", "signalR" },
+                SourceCodeKind.Regular,
+                TextLoader.From(TextAndVersion.Create(SourceText.From(clientInterface),
+                VersionStamp.Default)));
+            var updatedSolution = originalSolution.AddAdditionalDocument(docInfo);
 
             // generate the file:
-            var originalSolution = document.Project.Solution;
-            var docInfo = DocumentInfo.Create(
+            docInfo = DocumentInfo.Create(
                 DocumentId.CreateNewId(document.Project.Id),
                 "signalR.d.ts",
                 new string[] { "Scripts", "typings", "signalR" },
                 SourceCodeKind.Regular,
                 TextLoader.From(TextAndVersion.Create(SourceText.From(signalRdefinitions),
                 VersionStamp.Default)));
-            var updatedSolution = originalSolution.AddAdditionalDocument(docInfo);
+            updatedSolution = updatedSolution.AddAdditionalDocument(docInfo);
             return updatedSolution;
         }
 
