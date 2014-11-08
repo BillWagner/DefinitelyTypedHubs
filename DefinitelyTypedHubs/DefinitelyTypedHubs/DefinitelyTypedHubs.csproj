@@ -35,6 +35,7 @@
   <ItemGroup>
     <Compile Include="CodeRefactoringProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TypeSystem\TypeSscriptTypeDefinition.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CodeAnalysis">
