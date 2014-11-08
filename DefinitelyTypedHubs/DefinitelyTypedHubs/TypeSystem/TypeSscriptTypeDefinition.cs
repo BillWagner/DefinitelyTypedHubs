@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace DefinitelyTypedHubs.TypeSystem
 {
-    public class TypeScriptTypeDefinition
+    internal class TypeScriptTypeDefinition
     {
         public string Name { get; }
         public string Declaration { get; }
