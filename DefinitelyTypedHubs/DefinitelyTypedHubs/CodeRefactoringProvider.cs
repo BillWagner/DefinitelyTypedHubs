@@ -129,17 +129,11 @@ namespace DefinitelyTypedHubs
                     
                 // TODO: Parameters need TypeScript Names, if not simple types.
                 hubDefinition.Append("): IPromise<");
+                // TODO: Return Type must be TypeScript proper
                 hubDefinition.Append(member.ReturnType.ToString());
                 hubDefinition.AppendLine(">;");
-
             }
 
-
-            // TODO: Find the public methods.
-            // Hub interfaces 
-            //interface IChatHub {
-            //    send(name: string, message: string): IPromise<void>;
-            //}
             hubDefinition.AppendLine("}");
             hubDefinition.AppendLine();
         }
