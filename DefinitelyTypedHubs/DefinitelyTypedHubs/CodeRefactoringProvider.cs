@@ -11,6 +11,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Rename;
 using Microsoft.CodeAnalysis.Text;
 using System;
+using System.Text;
 
 namespace DefinitelyTypedHubs
 {
@@ -66,32 +67,159 @@ namespace DefinitelyTypedHubs
         private async Task<Solution> GenerateTypings(Document document, TypeDeclarationSyntax typeDecl, CancellationToken cancellationToken)
         {
             var originalSolution = document.Project.Solution;
-            // TODO: Generate the file for that one hub (I think a file per hub makes sense.)
-            string clientInterface = "interface I" + typeDecl.Identifier.ToString() + "Client {";
-            clientInterface += Environment.NewLine;
-            clientInterface += "}" + Environment.NewLine;
-            var docInfo = DocumentInfo.Create(
-                DocumentId.CreateNewId(document.Project.Id),
-                typeDecl.Identifier.ToString() + "Hub.d.ts",
-                new string[] { "Scripts", "typings", "signalR" },
-                SourceCodeKind.Regular,
-                TextLoader.From(TextAndVersion.Create(SourceText.From(clientInterface),
-                VersionStamp.Default)));
-            var updatedSolution = originalSolution.AddAdditionalDocument(docInfo);
+            var project = document.Project;
+
+            var updatedSolution = GenerateHubFile(document, typeDecl, originalSolution);
+
+            // Step 2: Generate the basic signalR.d.ts file.
+            updatedSolution = GenerateSignalRTypeDef(updatedSolution, project);
 
             // generate the file:
-            docInfo = DocumentInfo.Create(
-                DocumentId.CreateNewId(document.Project.Id),
-                "signalR.d.ts",
-                new string[] { "Scripts", "typings", "signalR" },
-                SourceCodeKind.Regular,
-                TextLoader.From(TextAndVersion.Create(SourceText.From(signalRdefinitions),
-                VersionStamp.Default)));
-            updatedSolution = updatedSolution.AddAdditionalDocument(docInfo);
             return updatedSolution;
         }
 
-    const string signalRdefinitions =
+        private static Solution GenerateHubFile(Document document, TypeDeclarationSyntax typeDecl, Solution originalSolution)
+        {
+            var typeName = typeDecl.Identifier.ToString();
+            StringBuilder hubDefinition = BuildClientInterfaces(typeName);
+
+            BuildPromiseDefinition(hubDefinition);
+
+            // Data definitions, if any (TODO):
+
+            BuildServerInterface(typeName, typeDecl, hubDefinition);
+
+            // Add the proxy.
+            BuildProxyDefinitions(typeName, hubDefinition);
+
+            var docInfo = DocumentInfo.Create(
+                    DocumentId.CreateNewId(document.Project.Id),
+                    typeName + "Hub.d.ts",
+                    new string[] { "Scripts", "typings", "signalR" },
+                    SourceCodeKind.Regular,
+                    TextLoader.From(TextAndVersion.Create(SourceText.From(hubDefinition.ToString()),
+                    VersionStamp.Default)));
+            var updatedSolution = originalSolution.AddAdditionalDocument(docInfo);
+            return updatedSolution;
+        }
+
+        private static void BuildServerInterface(string typeName, TypeDeclarationSyntax typeDecl, StringBuilder hubDefinition)
+        {
+            // Add the hub
+            hubDefinition.AppendLine("// Hub interfaces:");
+            hubDefinition.Append("inteface I");
+            hubDefinition.Append(typeName);
+            hubDefinition.AppendLine("{");
+
+            var publicMethods = from member in typeDecl.Members
+                                let method = member as MethodDeclarationSyntax
+                                where member.IsKind(SyntaxKind.MethodDeclaration)
+                                && method.Modifiers.Any(SyntaxKind.PublicKeyword)
+                                select method;
+
+            foreach (var member in publicMethods)
+            {
+                hubDefinition.Append("\t");
+                hubDefinition.Append(member.Identifier);
+                hubDefinition.Append("(");
+                var parms = member.ParameterList.Parameters
+                    .Select(parm => string.Format("{0}: {1}", parm.Identifier, parm.Type.ToString()))
+                    .Aggregate((memo, current) => string.Format("{0}, {1}", memo, current));
+                hubDefinition.Append(parms);
+                    
+                // TODO: Parameters need TypeScript Names, if not simple types.
+                hubDefinition.Append("): IPromise<");
+                hubDefinition.Append(member.ReturnType.ToString());
+                hubDefinition.AppendLine(">;");
+
+            }
+
+
+            // TODO: Find the public methods.
+            // Hub interfaces 
+            //interface IChatHub {
+            //    send(name: string, message: string): IPromise<void>;
+            //}
+            hubDefinition.AppendLine("}");
+            hubDefinition.AppendLine();
+        }
+
+        private static void BuildProxyDefinitions(string typeName, StringBuilder hubDefinition)
+        {
+            // Generetated proxies 
+            hubDefinition.AppendLine("// Proxy Definition:");
+
+            hubDefinition.Append("interface I");
+            hubDefinition.Append(typeName);
+            hubDefinition.AppendLine("Proxy {");
+
+            hubDefinition.Append("\tserver: I");
+            hubDefinition.Append(typeName);
+            hubDefinition.AppendLine(";");
+
+            hubDefinition.Append("\tclient: I");
+            hubDefinition.Append(typeName);
+            hubDefinition.AppendLine("Client;");
+
+            hubDefinition.AppendLine("}");
+            hubDefinition.AppendLine();
+        }
+
+        private static void BuildPromiseDefinition(StringBuilder hubDefinition)
+        {
+            // Add the promise spec
+            //Promise interface
+            hubDefinition.AppendLine();
+            hubDefinition.AppendLine("// Promise Interface");
+            hubDefinition.AppendLine("interface IPromise<T> {");
+            hubDefinition.AppendLine("\tdone(cb: (result: T) => any): IPromise<T>;");
+            hubDefinition.AppendLine("\terror(cb: (error: any) => any): IPromise<T>;");
+            hubDefinition.AppendLine("}");
+            hubDefinition.AppendLine();
+        }
+
+        private static StringBuilder BuildClientInterfaces(string typeName)
+        {
+            var hubDefinition = new StringBuilder();
+            hubDefinition.AppendLine("//");
+            hubDefinition.AppendLine("// Client interfaces:");
+            hubDefinition.AppendLine("// These are to be implemented by the user.");
+            hubDefinition.AppendLine("// These are for Hub -> Client calls.");
+            hubDefinition.AppendLine("// Some dynamic calls may be missing.");
+            hubDefinition.AppendLine();
+            hubDefinition.Append("interface I");
+            hubDefinition.Append(typeName);
+            hubDefinition.AppendLine("Client {");
+            // More here....
+            // TODO: This is the hard part, it's the methods that would 
+            // be called at the client.
+            hubDefinition.AppendLine("}");
+            return hubDefinition;
+        }
+
+        private static Solution GenerateSignalRTypeDef(Solution originalSolution, Project project)
+        {
+            // Check to see if this file already exists, and only create it conditionally.
+            // TODO: This isn't working, because this document doesn't appear as part of the
+            // project. Go figure.
+            if (!project.Documents.Any(d => d.Name == "signalR.d.ts"))
+            {
+
+                var signalRDoc = DocumentInfo.Create(
+                    DocumentId.CreateNewId(project.Id),
+                    "signalR.d.ts",
+                    new string[] { "Scripts", "typings", "signalR" },
+                    SourceCodeKind.Regular,
+                    TextLoader.From(TextAndVersion.Create(SourceText.From(signalRdefinitions),
+                    VersionStamp.Default)));
+                var updatedSolution = originalSolution.AddAdditionalDocument(signalRDoc);
+                return updatedSolution;
+            }
+            else
+                return originalSolution;
+        }
+
+        const string signalRdefinitions =
 @"// Code from DefinitelyTyped Project. https://github.com/borisyankov/DefinitelyTyped (MIT license)
 //   JQueryPromise & JQueryDeferred definitions (c) Microsoft
 //   SignalR definitions (c) Boris Yankov https://github.com/borisyankov/
