@@ -12,18 +12,77 @@ using Microsoft.CodeAnalysis.Rename;
 using Microsoft.CodeAnalysis.Text;
 using System;
 using System.Text;
+using DefinitelyTypedHubs.Generators;
 
 namespace DefinitelyTypedHubs
 {
+    /// <summary>
+    /// This class implements the refactoring that provides TypeScript 
+    /// typing definitions for a SignalR hub.
+    /// </summary>
+    /// <remarks>
+    /// This refactoring is available only when the selected node
+    /// is a type definition that represents a SignalR hub.
+    /// Open Issue: Should this refactoring only be available on
+    /// sealed classes, or should it work on any hub-derived class?
+    /// <p>
+    /// There are several actions that may be needed as part of the refactoring.
+    /// <list type="number">
+    /// <item>
+    /// <description>
+    /// The first task is to create a signalr.d.ts file that stores the basic
+    /// interfaces for SignalR. These are hardcoded (at this time), and will
+    /// be common for every project. Once generated, they will not be updated 
+    /// (at this time).
+    /// </description>
+    /// </item>
+    /// <item>
+    /// <description>
+    /// Next, I create a file that represents the methods that the client 
+    /// (TypeScript code) can call at the server. This one is reasonably 
+    /// straightforward: code must find all public methods in the hub class.
+    /// This must be regenerated whenever the user requests this refactoring.
+    /// The user may have added, changed, or removed public methods from the 
+    /// hub class.
+    /// </description>
+    /// </item>
+    /// <item>
+    /// <description>
+    /// Third, this refactoring creates a definition for the methods that the 
+    /// server code calls on the client. For the moment, this is a dummy file.
+    /// I'm still thinking about how to implement that side.
+    /// </description>
+    /// </item>
+    /// </list>
+    /// </p>
+    /// </remarks>
     [ExportCodeRefactoringProvider(DefinitelyTypedHubsCodeRefactoringProvider.RefactoringId, LanguageNames.CSharp), Shared]
     internal class DefinitelyTypedHubsCodeRefactoringProvider : CodeRefactoringProvider
     {
+        /// <summary>
+        /// This is the name for my refactoring.
+        /// </summary>
         public const string RefactoringId = "DefinitelyTypedHubs";
 
+        /// <summary>
+        /// This method computes what action(s) might be valid here. 
+        /// </summary>
+        /// <param name="context">
+        /// The context, which represents where the developer's cursor is.
+        /// </param>
+        /// <returns>
+        /// A task that, when succesfully completed, has registered any valid actions.
+        /// </returns>
+        /// <remarks>
+        /// This method can be whenever the user brings up the refactoring 
+        /// lightbulb. For that reason, this method must be well-performing. 
+        /// We want to exit as quickly as possible when this refactoring will
+        /// not be valid.
+        /// If the cursor is on a class definition that is derived from a hub,
+        /// this method registers the refactoring action.
+        /// </remarks>
         public sealed override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)
         {
-            // TODO: Replace the following code with your own analysis, generating a CodeAction for each refactoring to offer
-
             var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
 
             // Find the node at the selection.
@@ -44,7 +103,8 @@ namespace DefinitelyTypedHubs
 
             var parent = typeInfo;
             bool found = false;
-            // We want to find the string "NamedType Microsoft.AspNet.SignalR.Hub"
+            // We want to find the string "NamedType Microsoft.AspNet.SignalR.Hub" 
+            // as a base c;ass/
             do
             {
                 parent = parent.BaseType;
@@ -55,10 +115,13 @@ namespace DefinitelyTypedHubs
                     break;
                 }
             } while ((parent.Name != "Hub") && (parent.Name != "Object"));
+
+            // This class is not a hub, so return.
             if (!found) return;
 
-            // For any type declaration node, create a code action to reverse the identifier text.
-            var action = CodeAction.Create("Generate Typescipt Typings", c => GenerateTypings(context.Document, typeDecl, c));
+            // For any type declaration node that is a hub, create a code action to reverse the identifier text.
+            var action = CodeAction.Create("Generate Typescipt Typings", 
+                c => GenerateTypings(context.Document, typeDecl, c));
 
             // Register this code action.
             context.RegisterRefactoring(action);
@@ -68,11 +131,15 @@ namespace DefinitelyTypedHubs
         {
             var originalSolution = document.Project.Solution;
             var project = document.Project;
+            // This method runs three successive tasks.
+            // 1. Generate the signalr.d.ts file, if needed.
+            var updatedSolution = SignalRTypeGenerator.CreateSignalRTypeDefIfNeeded(originalSolution, project);
 
-            var updatedSolution = GenerateHubFile(document, typeDecl, originalSolution);
+            // 2. Generate the interface that includes all server side methods.
+            updatedSolution = GenerateHubFile(document, typeDecl, updatedSolution);
 
-            // Step 2: Generate the basic signalR.d.ts file.
-            updatedSolution = GenerateSignalRTypeDef(updatedSolution, project);
+            // 3. Generate the interface that includes all client side methods (later).
+
 
             // generate the file:
             return updatedSolution;
@@ -190,182 +257,5 @@ namespace DefinitelyTypedHubs
             hubDefinition.AppendLine("}");
             return hubDefinition;
         }
-
-        private static Solution GenerateSignalRTypeDef(Solution originalSolution, Project project)
-        {
-            // Check to see if this file already exists, and only create it conditionally.
-            // TODO: This isn't working, because this document doesn't appear as part of the
-            // project. Go figure.
-            if (!project.Documents.Any(d => d.Name == "signalR.d.ts"))
-            {
-
-                var signalRDoc = DocumentInfo.Create(
-                    DocumentId.CreateNewId(project.Id),
-                    "signalR.d.ts",
-                    new string[] { "Scripts", "typings", "signalR" },
-                    SourceCodeKind.Regular,
-                    TextLoader.From(TextAndVersion.Create(SourceText.From(signalRdefinitions),
-                    VersionStamp.Default)));
-                var updatedSolution = originalSolution.AddAdditionalDocument(signalRDoc);
-                return updatedSolution;
-            }
-            else
-                return originalSolution;
-        }
-
-        const string signalRdefinitions =
-@"// Code from DefinitelyTyped Project. https://github.com/borisyankov/DefinitelyTyped (MIT license)
-//   JQueryPromise & JQueryDeferred definitions (c) Microsoft
-//   SignalR definitions (c) Boris Yankov https://github.com/borisyankov/
-//   Updated by Murat Girgin
-//   Roslyn-ized by Bill Wagner
-
-//   
-//    Copyrights are respective of each contributor listed at the beginning of each definition file.//
-//
-//    Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-//
-//    The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-//
-//    THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-//
-
-// Simplified JQueryPromise and JQueryDefered, renamed to prevent name potential clashes with jquery
-    interface IPromise<T>
-    {
-    always(...alwaysCallbacks: any[]): IPromise<T>;
-    done(...doneCallbacks: any[]): IPromise<T>;
-    fail(...failCallbacks: any[]): IPromise<T>;
-    progress(...progressCallbacks: any[]): IPromise<T>;
-    then<U>(onFulfill: (...values: any[]) => U, onReject?: (...reasons: any[]) => U, onProgress?: (...progression: any[]) => any): IPromise<U>;
-}
-    interface IDeferred<T> extends IPromise<T> {
-        always(...alwaysCallbacks: any[]): IDeferred<T>;
-        done(...doneCallbacks: any[]): IDeferred<T>;
-        fail(...failCallbacks: any[]): IDeferred<T>;
-        progress(...progressCallbacks: any[]): IDeferred<T>;
-        notify(...args: any[]): IDeferred<T>;
-        notifyWith(context: any, ...args: any[]): IDeferred<T>;
-        reject(...args: any[]): IDeferred<T>;
-        rejectWith(context: any, ...args: any[]): IDeferred<T>;
-        resolve(val: T): IDeferred<T>;
-        resolve(...args: any[]): IDeferred<T>;
-        resolveWith(context: any, ...args: any[]): IDeferred<T>;
-        state(): string;
-        promise(target?: any): IPromise<T>;
-    }
-
-    interface HubMethod
-    {
-    (callback: (data: string) => void);
-}
-
-    interface SignalREvents
-    {
-        onStart: string;
-    onStarting: string;
-    onReceived: string;
-    onError: string;
-    onConnectionSlow: string;
-    onReconnect: string;
-    onStateChanged: string;
-    onDisconnect: string;
-}
-
-    interface SignalRStateChange
-    {
-        oldState: number;
-    newState: number;
-}
-
-    interface SignalR
-    {
-        events: SignalREvents;
-    connectionState: any;
-    transports: any;
-
-    hub: HubConnection;
-    id: string;
-    logging: boolean;
-    messageId: string;
-    url: string;
-
-    (url: string, queryString?: any, logging?: boolean): SignalR;
-    hubConnection(url?: string): SignalR;
-
-    log(msg: string, logging: boolean): void;
-    isCrossDomain(url: string): boolean;
-    changeState(connection: SignalR, expectedState: number, newState: number): boolean;
-    isDisconnecting(connection: SignalR): boolean;
-
-    // createHubProxy(hubName: string): SignalR;
-
-    start(): IPromise<any>;
-    start(callback: () => void): IPromise<any>;
-    start(settings: ConnectionSettings): IPromise<any>;
-    start(settings: ConnectionSettings, callback: () => void): IPromise<any>;
-
-    send(data: string): void;
-    stop(async?: boolean, notifyServer?: boolean): void;
-
-    starting(handler: () => void): SignalR;
-    received(handler: (data: any) => void): SignalR;
-    error(handler: (error: string) => void): SignalR;
-    stateChanged(handler: (change: SignalRStateChange) => void): SignalR;
-    disconnected(handler: () => void): SignalR;
-    connectionSlow(handler: () => void): SignalR;
-    sending(handler: () => void): SignalR;
-    reconnecting(handler: () => void): SignalR;
-    reconnected(handler: () => void): SignalR;
-}
-
-    interface HubProxy
-    {
-    (connection: HubConnection, hubName: string): HubProxy;
-    state: any;
-    connection: HubConnection;
-    hubName: string;
-    init(connection: HubConnection, hubName: string): void;
-    hasSubscriptions(): boolean;
-    on(eventName: string, callback: (...msg) => void): HubProxy;
-    off(eventName: string, callback: (msg) => void): HubProxy;
-    invoke(methodName: string, ...args: any[]): any; // IDeferred<any>;
-}
-
-    interface HubConnectionSettings
-    {
-        queryString?: string;
-    logging?: boolean;
-    useDefaultPath?: boolean;
-}
-
-    interface HubConnection extends SignalR
-    {
-        //(url?: string, queryString?: any, logging?: boolean): HubConnection;
-        proxies;
-        received(callback: (data: { Id; Method; Hub; State; Args; }) => void): HubConnection;
-        createHubProxy(hubName: string): HubProxy;
-    }
-
-    interface SignalRfn
-    {
-    init(url, qs, logging);
-    }
-
-    interface ConnectionSettings
-    {
-        transport? ;
-    callback? ;
-    waitForPageLoad?: boolean;
-    jsonp?: boolean;
-}
-
-    interface JQueryStatic
-    {
-        signalR: SignalR;
-    connection: SignalR;
-    hubConnection(url?: string, queryString?: any, logging?: boolean): HubConnection;
-}
-";
     }
 }

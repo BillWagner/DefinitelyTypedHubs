@@ -15,7 +15,7 @@ namespace DefinitelyTypedHubs.TypeSystem
         public static List<int> TupleTypesByCount { get; set; }
         public static bool HasDictionary { get; set; }
 
-        static TypeSystemMappings()
+        static TypeSystemMappings() 
         {
             cache = new Dictionary<string, TypeScriptTypeDefinition>();
             TupleTypesByCount = new List<int>();
