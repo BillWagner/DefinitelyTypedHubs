@@ -146,112 +146,59 @@ namespace DefinitelyTypedHubs
 
             var serverDefinitions = new ServerMethodsGenerator(typeDecl);
 
-
-            // This is generated as a string, 
-            updatedSolution = GenerateHubFile(document, typeDecl, updatedSolution);
+            var serverInterfaceDefn = serverDefinitions.GenerateInterface(typeName);
 
             // 3. Generate the interface that includes all client side methods (later).
+            var clientDefinitions = new ClientMethodsGenerator(typeDecl);
+            var clientInterfaceDefn = clientDefinitions.GenerateInterface(typeName);
+
+            // 4. Generate the proxy type:
+            var proxyDefn = BuildProxyDefinitions(typeName);
+
+
+            // 5. Add the file:
+            string sourceText = serverInterfaceDefn + clientInterfaceDefn + proxyDefn;
+            updatedSolution = GenerateHubFile(typeName, document.Project.Id, sourceText, updatedSolution);
+
 
             // generate the file:
             return updatedSolution;
         }
 
-        private static Solution GenerateHubFile(Document document, TypeDeclarationSyntax typeDecl, Solution originalSolution)
+        private static Solution GenerateHubFile(string typeName, ProjectId projID, string sourceText, Solution originalSolution)
         {
-            var typeName = typeDecl.Identifier.ToString();
-            StringBuilder hubDefinition = BuildClientInterfaces(typeName);
-
-            // Data definitions, if any (TODO):
-
-            BuildServerInterface(typeName, typeDecl, hubDefinition);
-
-            // Add the proxy.
-            BuildProxyDefinitions(typeName, hubDefinition);
-
             var docInfo = DocumentInfo.Create(
-                    DocumentId.CreateNewId(document.Project.Id),
+                    DocumentId.CreateNewId(projID),
                     typeName + "Hub.d.ts",
                     new string[] { "Scripts", "typings", "signalR" },
                     SourceCodeKind.Regular,
-                    TextLoader.From(TextAndVersion.Create(SourceText.From(hubDefinition.ToString()),
+                    TextLoader.From(TextAndVersion.Create(SourceText.From(sourceText),
                     VersionStamp.Default)));
             var updatedSolution = originalSolution.AddAdditionalDocument(docInfo);
             return updatedSolution;
         }
 
-        private static void BuildServerInterface(string typeName, TypeDeclarationSyntax typeDecl, StringBuilder hubDefinition)
+        private static string BuildProxyDefinitions(string typeName)
         {
-            // Add the hub
-            hubDefinition.AppendLine("// Hub interfaces:");
-            hubDefinition.Append("interface I");
-            hubDefinition.Append(typeName);
-            hubDefinition.AppendLine("{");
-
-            var publicMethods = from member in typeDecl.Members
-                                let method = member as MethodDeclarationSyntax
-                                where member.IsKind(SyntaxKind.MethodDeclaration)
-                                && method.Modifiers.Any(SyntaxKind.PublicKeyword)
-                                select method;
-
-            foreach (var member in publicMethods)
-            {
-                hubDefinition.Append("\t");
-                hubDefinition.Append(member.Identifier);
-                hubDefinition.Append("(");
-                var parms = member.ParameterList.Parameters
-                    .Select(parm => string.Format("{0}: {1}", parm.Identifier, parm.Type.ToString()))
-                    .Aggregate((memo, current) => string.Format("{0}, {1}", memo, current));
-                hubDefinition.Append(parms);
-                    
-                // TODO: Parameters need TypeScript Names, if not simple types.
-                hubDefinition.Append("): IPromise<");
-                // TODO: Return Type must be TypeScript proper
-                hubDefinition.Append(member.ReturnType.ToString());
-                hubDefinition.AppendLine(">;");
-            }
-
-            hubDefinition.AppendLine("}");
-            hubDefinition.AppendLine();
-        }
-
-        private static void BuildProxyDefinitions(string typeName, StringBuilder hubDefinition)
-        {
+            var builder = new StringBuilder();
             // Generetated proxies 
-            hubDefinition.AppendLine("// Proxy Definition:");
+            builder.AppendLine("// Proxy Definition:");
 
-            hubDefinition.Append("interface I");
-            hubDefinition.Append(typeName);
-            hubDefinition.AppendLine("Proxy {");
+            builder.Append("interface I");
+            builder.Append(typeName);
+            builder.AppendLine("Proxy {");
 
-            hubDefinition.Append("\tserver: I");
-            hubDefinition.Append(typeName);
-            hubDefinition.AppendLine(";");
+            builder.Append("\tserver: I");
+            builder.Append(typeName);
+            builder.AppendLine(";");
 
-            hubDefinition.Append("\tclient: I");
-            hubDefinition.Append(typeName);
-            hubDefinition.AppendLine("Client;");
+            builder.Append("\tclient: I");
+            builder.Append(typeName);
+            builder.AppendLine("Client;");
 
-            hubDefinition.AppendLine("}");
-            hubDefinition.AppendLine();
-        }
-
-        private static StringBuilder BuildClientInterfaces(string typeName)
-        {
-            var hubDefinition = new StringBuilder();
-            hubDefinition.AppendLine("//");
-            hubDefinition.AppendLine("// Client interfaces:");
-            hubDefinition.AppendLine("// These are to be implemented by the user.");
-            hubDefinition.AppendLine("// These are for Hub -> Client calls.");
-            hubDefinition.AppendLine("// Some dynamic calls may be missing.");
-            hubDefinition.AppendLine();
-            hubDefinition.Append("interface I");
-            hubDefinition.Append(typeName);
-            hubDefinition.AppendLine("Client {");
-            // More here....
-            // TODO: This is the hard part, it's the methods that would 
-            // be called at the client.
-            hubDefinition.AppendLine("}");
-            return hubDefinition;
+            builder.AppendLine("}");
+            builder.AppendLine();
+            return builder.ToString();
         }
     }
 }

@@ -12,6 +12,8 @@ namespace DefinitelyTypedHubs.Generators
 {
     public class ServerMethodsGenerator
     {
+        private readonly IEnumerable<MethodSignature> methods;
+
         public ServerMethodsGenerator(TypeDeclarationSyntax hubTypeDeclaration)
         {
             // Build the tree of method names
@@ -27,50 +29,46 @@ namespace DefinitelyTypedHubs.Generators
                                 && method.Modifiers.Any(SyntaxKind.PublicKeyword)
                                 select method;
 
-            foreach (var member in publicMethods)
-            {
-                var returnType = member.ReturnType.ToString();
-                var methodName = member.Identifier.ToString();
-                var parameters = member.ParameterList.Parameters
-                    .Select(parm => new MethodParameter(parm.Type.ToString(), parm.Identifier.ToString()));
-            }
+            // TODO: If return type or parameter type is a UDT, find 
+            // the definintion of the type.
+            // ISSUE: Might need the full solution node to find types.
+            var foundMethods = from member in publicMethods
+                      select new MethodSignature(
+                          member.Identifier.ToString(),
+                          member.ReturnType.ToString(),
+                          member.ParameterList.Parameters
+                            .Select(parm => new MethodParameter(parm.Type.ToString(), parm.Identifier.ToString())));
+            methods = foundMethods.ToList();
 
         }
 
-        private static void BuildServerInterface(string typeName, TypeDeclarationSyntax typeDecl, StringBuilder hubDefinition)
+        public string GenerateInterface(string serverTypeName)
         {
-            // Add the hub
-            hubDefinition.AppendLine("// Hub interfaces:");
-            hubDefinition.Append("interface I");
-            hubDefinition.Append(typeName);
-            hubDefinition.AppendLine("{");
+            var builder = new StringBuilder("// Hub interfaces:");
+            builder.AppendLine();
+            builder.Append("interface I");
+            builder.Append(serverTypeName);
+            builder.AppendLine("{");
 
-            var publicMethods = from member in typeDecl.Members
-                                let method = member as MethodDeclarationSyntax
-                                where member.IsKind(SyntaxKind.MethodDeclaration)
-                                && method.Modifiers.Any(SyntaxKind.PublicKeyword)
-                                select method;
-
-            foreach (var member in publicMethods)
+            foreach (var member in methods)
             {
-                hubDefinition.Append("\t");
-                hubDefinition.Append(member.Identifier);
-                hubDefinition.Append("(");
-                var parms = member.ParameterList.Parameters
-                    .Select(parm => string.Format("{0}: {1}", parm.Identifier, parm.Type.ToString()))
+                builder.Append("\t");
+                builder.Append(member.MethodName);
+                builder.Append("(");
+                var parms = member.ParameterList
+                    .Select(parm => string.Format("{0}: {1}", parm.ParameterName, parm.ParameterType))
                     .Aggregate((memo, current) => string.Format("{0}, {1}", memo, current));
-                hubDefinition.Append(parms);
+                builder.Append(parms);
 
-                // TODO: Parameters need TypeScript Names, if not simple types.
-                hubDefinition.Append("): IPromise<");
-                // TODO: Return Type must be TypeScript proper
-                hubDefinition.Append(member.ReturnType.ToString());
-                hubDefinition.AppendLine(">;");
+                builder.Append("): IPromise<");
+                builder.Append(member.ReturnType.ToString());
+                builder.AppendLine(">;");
             }
 
-            hubDefinition.AppendLine("}");
-            hubDefinition.AppendLine();
-        }
+            builder.AppendLine("}");
+            builder.AppendLine();
 
+            return builder.ToString();
+        }
     }
 }
