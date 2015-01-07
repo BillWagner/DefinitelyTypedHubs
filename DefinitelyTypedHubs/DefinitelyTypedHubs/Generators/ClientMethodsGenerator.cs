@@ -30,6 +30,7 @@ namespace DefinitelyTypedHubs.Generators
             // TODO: This is the hard part, it's the methods that would 
             // be called at the client.
             builder.AppendLine("}");
+            builder.AppendLine();
             return builder.ToString();
         }
     }

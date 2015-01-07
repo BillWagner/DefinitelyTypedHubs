@@ -13,7 +13,7 @@ namespace DefinitelyTypedHubs.TypeSystem
             MethodName = name;
             ReturnType = returnType;
             // Eagerly execute the query and provide local storage:
-            parms = ParameterList.ToArray();
+            ParameterList = parms.ToArray();
         }
         public string MethodName { get; }
         public string ReturnType { get; }

@@ -155,11 +155,9 @@ namespace DefinitelyTypedHubs
             // 4. Generate the proxy type:
             var proxyDefn = BuildProxyDefinitions(typeName);
 
-
             // 5. Add the file:
             string sourceText = serverInterfaceDefn + clientInterfaceDefn + proxyDefn;
             updatedSolution = GenerateHubFile(typeName, document.Project.Id, sourceText, updatedSolution);
-
 
             // generate the file:
             return updatedSolution;
@@ -167,9 +165,10 @@ namespace DefinitelyTypedHubs
 
         private static Solution GenerateHubFile(string typeName, ProjectId projID, string sourceText, Solution originalSolution)
         {
+            var fileName = typeName.EndsWith("Hub") ? typeName : typeName + "Hub";
             var docInfo = DocumentInfo.Create(
                     DocumentId.CreateNewId(projID),
-                    typeName + "Hub.d.ts",
+                    fileName + ".d.ts",
                     new string[] { "Scripts", "typings", "signalR" },
                     SourceCodeKind.Regular,
                     TextLoader.From(TextAndVersion.Create(SourceText.From(sourceText),
