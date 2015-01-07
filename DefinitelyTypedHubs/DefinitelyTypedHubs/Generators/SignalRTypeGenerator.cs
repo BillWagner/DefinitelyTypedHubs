@@ -174,6 +174,11 @@ interface JQueryStatic {
     connection: SignalR;
     hubConnection(url?: string, queryString?: any, logging?: boolean): HubConnection;
 }
+
+interface IPromise<T> {
+    done(cb: (result: T) => any): IPromise<T>;
+    error(cb: (error: any) => any): IPromise<T>;
+}
 ";
     }
 }

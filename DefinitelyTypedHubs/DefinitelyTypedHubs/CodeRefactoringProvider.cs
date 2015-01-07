@@ -55,6 +55,10 @@ namespace DefinitelyTypedHubs
     /// </item>
     /// </list>
     /// </p>
+    /// <p>
+    /// During both the second and third phases, this code also builds any 
+    /// data types needed for the interfaces.  That's also on the TODO list.
+    /// </p>
     /// </remarks>
     [ExportCodeRefactoringProvider(DefinitelyTypedHubsCodeRefactoringProvider.RefactoringId, LanguageNames.CSharp), Shared]
     internal class DefinitelyTypedHubsCodeRefactoringProvider : CodeRefactoringProvider
@@ -132,14 +136,21 @@ namespace DefinitelyTypedHubs
             var originalSolution = document.Project.Solution;
             var project = document.Project;
             // This method runs three successive tasks.
+
             // 1. Generate the signalr.d.ts file, if needed.
             var updatedSolution = SignalRTypeGenerator.CreateSignalRTypeDefIfNeeded(originalSolution, project);
 
             // 2. Generate the interface that includes all server side methods.
+            // Figure out the server and client type names:
+            var typeName = typeDecl.Identifier.ToString();
+
+            var serverDefinitions = new ServerMethodsGenerator(typeDecl);
+
+
+            // This is generated as a string, 
             updatedSolution = GenerateHubFile(document, typeDecl, updatedSolution);
 
             // 3. Generate the interface that includes all client side methods (later).
-
 
             // generate the file:
             return updatedSolution;
@@ -149,8 +160,6 @@ namespace DefinitelyTypedHubs
         {
             var typeName = typeDecl.Identifier.ToString();
             StringBuilder hubDefinition = BuildClientInterfaces(typeName);
-
-            BuildPromiseDefinition(hubDefinition);
 
             // Data definitions, if any (TODO):
 
@@ -174,7 +183,7 @@ namespace DefinitelyTypedHubs
         {
             // Add the hub
             hubDefinition.AppendLine("// Hub interfaces:");
-            hubDefinition.Append("inteface I");
+            hubDefinition.Append("interface I");
             hubDefinition.Append(typeName);
             hubDefinition.AppendLine("{");
 
@@ -222,19 +231,6 @@ namespace DefinitelyTypedHubs
             hubDefinition.Append(typeName);
             hubDefinition.AppendLine("Client;");
 
-            hubDefinition.AppendLine("}");
-            hubDefinition.AppendLine();
-        }
-
-        private static void BuildPromiseDefinition(StringBuilder hubDefinition)
-        {
-            // Add the promise spec
-            //Promise interface
-            hubDefinition.AppendLine();
-            hubDefinition.AppendLine("// Promise Interface");
-            hubDefinition.AppendLine("interface IPromise<T> {");
-            hubDefinition.AppendLine("\tdone(cb: (result: T) => any): IPromise<T>;");
-            hubDefinition.AppendLine("\terror(cb: (error: any) => any): IPromise<T>;");
             hubDefinition.AppendLine("}");
             hubDefinition.AppendLine();
         }
