@@ -137,9 +137,6 @@ namespace DefinitelyTypedHubs
             var project = document.Project;
             // This method runs three successive tasks.
 
-            // 1. Generate the signalr.d.ts file, if needed.
-            var updatedSolution = SignalRTypeGenerator.CreateSignalRTypeDefIfNeeded(originalSolution, project);
-
             // 2. Generate the interface that includes all server side methods.
             // Figure out the server and client type names:
             var typeName = typeDecl.Identifier.ToString();
@@ -157,7 +154,10 @@ namespace DefinitelyTypedHubs
 
             // 5. Add the file:
             string sourceText = serverInterfaceDefn + clientInterfaceDefn + proxyDefn;
-            updatedSolution = GenerateHubFile(typeName, document.Project.Id, sourceText, updatedSolution);
+            var updatedSolution = GenerateHubFile(typeName, document.Project.Id, sourceText, originalSolution);
+
+            // 1. Generate the signalr.d.ts file, if needed.
+            updatedSolution = SignalRTypeGenerator.CreateSignalRTypeDefIfNeeded(updatedSolution, project);
 
             // generate the file:
             return updatedSolution;

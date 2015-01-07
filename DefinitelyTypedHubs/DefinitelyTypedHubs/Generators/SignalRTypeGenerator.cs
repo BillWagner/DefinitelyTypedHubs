@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
+using System.IO;
 
 namespace DefinitelyTypedHubs.Generators
 {
@@ -15,7 +16,25 @@ namespace DefinitelyTypedHubs.Generators
             // Check to see if this file already exists, and only create it conditionally.
             // TODO: This isn't working, because this document doesn't appear as part of the
             // project. Go figure.
-            if (!project.Documents.Any(d => d.Name == "signalR.d.ts"))
+            // From Srivatsn Narayanan
+            // We create Documents only for C# files normally. 
+            // However, you can put some annotation in a project to ask for non-C# documents.
+
+            //Say in you csproj file you have this:
+
+            //< Content Include = “somefile.html” />
+            //< None Include =”somefile.d.ts” />
+
+            //You can then add this property to the csproj file:
+
+            //< AdditionalFileItemNames >$(AdditionalFileItemNames); Content; None </ AdditionalFileItemNames >
+
+            // This tells the project system to pass all items of name “Content” and “None” 
+            // to the compiler as well.Then you can inspect Project.AdditionalDocuments and see TextDocuments for these files.
+
+            // It turns out that there isn't a good way to add the AdditionalFileItemNames node to the 
+            // project file. Hmm.
+            if (!project.AdditionalDocuments.Any(d => d.Name == "signalR.d.ts"))
             {
                 var signalRDoc = DocumentInfo.Create(
                     DocumentId.CreateNewId(project.Id),
@@ -24,6 +43,7 @@ namespace DefinitelyTypedHubs.Generators
                     SourceCodeKind.Regular,
                     TextLoader.From(TextAndVersion.Create(SourceText.From(signalRdefinitions),
                     VersionStamp.Default)));
+                
                 var updatedSolution = originalSolution.AddAdditionalDocument(signalRDoc);
                 return updatedSolution;
             }
