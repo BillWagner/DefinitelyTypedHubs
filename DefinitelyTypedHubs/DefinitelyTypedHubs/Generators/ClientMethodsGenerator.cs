@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
+﻿using DefinitelyTypedHubs.TypeSystem;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,12 +10,12 @@ namespace DefinitelyTypedHubs.Generators
 {
     public class ClientMethodsGenerator
     {
-        public ClientMethodsGenerator(TypeDeclarationSyntax hubTypeDeclaration)
+        public ClientMethodsGenerator(TypeDeclarationSyntax hubTypeDeclaration, TypeMappingDictionary typeMap)
         {
             // TODO: Work to determine the valid client methods.
         }
 
-        public string GenerateInterface(string serverTypeName)
+        public string GenerateInterface(string serverTypeName, TypeMappingDictionary typeMap)
         {
             var builder = new StringBuilder();
             builder.AppendLine("//");
@@ -22,7 +23,6 @@ namespace DefinitelyTypedHubs.Generators
             builder.AppendLine("// These are to be implemented by the user.");
             builder.AppendLine("// These are for Hub -> Client calls.");
             builder.AppendLine("// Some dynamic calls may be missing.");
-            builder.AppendLine();
             builder.Append("interface I");
             builder.Append(serverTypeName);
             builder.AppendLine("Client {");

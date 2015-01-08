@@ -38,8 +38,10 @@
     <Compile Include="Generators\ServerMethodsGenerator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Generators\SignalRTypeGenerator.cs" />
+    <Compile Include="TypeSystem\CSharpToTypeScriptMapping.cs" />
     <Compile Include="TypeSystem\MethodParameter.cs" />
     <Compile Include="TypeSystem\MethodSignature.cs" />
+    <Compile Include="TypeSystem\TypeMappingDictionary.cs" />
     <Compile Include="TypeSystem\TypeSscriptTypeDefinition.cs" />
     <Compile Include="TypeSystem\TypeSystemMappings.cs" />
   </ItemGroup>

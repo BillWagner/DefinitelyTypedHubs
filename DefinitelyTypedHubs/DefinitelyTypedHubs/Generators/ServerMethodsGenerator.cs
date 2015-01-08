@@ -14,7 +14,8 @@ namespace DefinitelyTypedHubs.Generators
     {
         private readonly IEnumerable<MethodSignature> methods;
 
-        public ServerMethodsGenerator(TypeDeclarationSyntax hubTypeDeclaration)
+        public ServerMethodsGenerator(TypeDeclarationSyntax hubTypeDeclaration, 
+            TypeMappingDictionary typeDictionary)
         {
             // Build the tree of method names
             // So that this only traverses the tree once, also build 
@@ -27,22 +28,12 @@ namespace DefinitelyTypedHubs.Generators
                                 let method = member as MethodDeclarationSyntax
                                 where member.IsKind(SyntaxKind.MethodDeclaration)
                                 && method.Modifiers.Any(SyntaxKind.PublicKeyword)
-                                select method;
+                                select new MethodSignature(method, typeDictionary);
 
-            // TODO: If return type or parameter type is a UDT, find 
-            // the definintion of the type.
-            // ISSUE: Might need the full solution node to find types.
-            var foundMethods = from member in publicMethods
-                      select new MethodSignature(
-                          member.Identifier.ToString(),
-                          member.ReturnType.ToString(),
-                          member.ParameterList.Parameters
-                            .Select(parm => new MethodParameter(parm.Type.ToString(), parm.Identifier.ToString())));
-            methods = foundMethods.ToList();
-
+            methods = publicMethods.ToList();
         }
 
-        public string GenerateInterface(string serverTypeName)
+        public string GenerateInterface(string serverTypeName, TypeMappingDictionary typeDictionary)
         {
             var builder = new StringBuilder("// Hub interfaces:");
             builder.AppendLine();
@@ -56,10 +47,13 @@ namespace DefinitelyTypedHubs.Generators
                 builder.Append(member.MethodName);
                 builder.Append("(");
                 var parms = member.ParameterList
-                    .Select(parm => string.Format("{0}: {1}", parm.ParameterName, parm.ParameterType))
-                    .Aggregate((memo, current) => string.Format("{0}, {1}", memo, current));
-                builder.Append(parms);
-
+                    .Select(parm => string.Format("{0}: {1}", parm.ParameterName, parm.ParameterType));
+                if (parms.Any())
+                {
+                    var parmString = parms
+                        .Aggregate((memo, current) => string.Format("{0}, {1}", memo, current));
+                    builder.Append(parmString);
+                }
                 builder.Append("): IPromise<");
                 builder.Append(member.ReturnType.ToString());
                 builder.AppendLine(">;");

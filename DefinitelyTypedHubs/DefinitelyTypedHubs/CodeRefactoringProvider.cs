@@ -13,6 +13,7 @@ using Microsoft.CodeAnalysis.Text;
 using System;
 using System.Text;
 using DefinitelyTypedHubs.Generators;
+using DefinitelyTypedHubs.TypeSystem;
 
 namespace DefinitelyTypedHubs
 {
@@ -135,24 +136,30 @@ namespace DefinitelyTypedHubs
         {
             var originalSolution = document.Project.Solution;
             var project = document.Project;
-            // This method runs three successive tasks.
+            // This method runs a number of successive tasks.
+
+            // 1. Build a type mapper that knows what C# types are used
+            // by the hub interface, and creates equivalent TypeScript types.
+            var typeMap = new TypeMappingDictionary();
 
             // 2. Generate the interface that includes all server side methods.
             // Figure out the server and client type names:
             var typeName = typeDecl.Identifier.ToString();
 
-            var serverDefinitions = new ServerMethodsGenerator(typeDecl);
+            var serverDefinitions = new ServerMethodsGenerator(typeDecl, typeMap);
 
-            var serverInterfaceDefn = serverDefinitions.GenerateInterface(typeName);
+            var serverInterfaceDefn = serverDefinitions.GenerateInterface(typeName, typeMap);
 
             // 3. Generate the interface that includes all client side methods (later).
-            var clientDefinitions = new ClientMethodsGenerator(typeDecl);
-            var clientInterfaceDefn = clientDefinitions.GenerateInterface(typeName);
+            var clientDefinitions = new ClientMethodsGenerator(typeDecl, typeMap);
+            var clientInterfaceDefn = clientDefinitions.GenerateInterface(typeName, typeMap);
 
-            // 4. Generate the proxy type:
+            // 4. Generate the text for all UDTs:
+
+            // 5. Generate the proxy type:
             var proxyDefn = BuildProxyDefinitions(typeName);
 
-            // 5. Add the file:
+            // 6. Add the file:
             string sourceText = serverInterfaceDefn + clientInterfaceDefn + proxyDefn;
             var updatedSolution = GenerateHubFile(typeName, document.Project.Id, sourceText, originalSolution);
 
