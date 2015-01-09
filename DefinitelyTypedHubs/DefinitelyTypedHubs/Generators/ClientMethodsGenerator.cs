@@ -1,4 +1,5 @@
 ﻿using DefinitelyTypedHubs.TypeSystem;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,9 @@ namespace DefinitelyTypedHubs.Generators
 {
     public class ClientMethodsGenerator
     {
-        public ClientMethodsGenerator(TypeDeclarationSyntax hubTypeDeclaration, TypeMappingDictionary typeMap)
+        public ClientMethodsGenerator(TypeDeclarationSyntax hubTypeDeclaration, 
+            SemanticModel semanticModel,
+            TypeMappingDictionary typeMap)
         {
             // TODO: Work to determine the valid client methods.
         }

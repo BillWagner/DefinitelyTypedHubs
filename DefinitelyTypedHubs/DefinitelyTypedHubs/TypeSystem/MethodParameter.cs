@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,9 +10,13 @@ namespace DefinitelyTypedHubs.TypeSystem
 {
     public struct MethodParameter
     {
-        public MethodParameter(ParameterSyntax parm, TypeMappingDictionary typeMap)
+        public MethodParameter(ParameterSyntax parm, SemanticModel semanticModel, TypeMappingDictionary typeMap)
         {
-            ParameterType = typeMap.FindOrAdd(parm.Type.ToString());
+            var symbol = semanticModel.GetSymbolInfo(parm.Type);
+
+            var cSharpType = symbol.Symbol.Name;
+
+            ParameterType = typeMap.FindOrAdd(cSharpType);
             ParameterName = parm.Identifier.ToString();
         }
         public string ParameterType { get; }

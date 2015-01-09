@@ -15,6 +15,7 @@ namespace DefinitelyTypedHubs.Generators
         private readonly IEnumerable<MethodSignature> methods;
 
         public ServerMethodsGenerator(TypeDeclarationSyntax hubTypeDeclaration, 
+            SemanticModel semanticModel,
             TypeMappingDictionary typeDictionary)
         {
             // Build the tree of method names
@@ -28,7 +29,7 @@ namespace DefinitelyTypedHubs.Generators
                                 let method = member as MethodDeclarationSyntax
                                 where member.IsKind(SyntaxKind.MethodDeclaration)
                                 && method.Modifiers.Any(SyntaxKind.PublicKeyword)
-                                select new MethodSignature(method, typeDictionary);
+                                select new MethodSignature(method, semanticModel, typeDictionary);
 
             methods = publicMethods.ToList();
         }

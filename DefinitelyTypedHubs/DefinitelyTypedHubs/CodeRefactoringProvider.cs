@@ -136,6 +136,9 @@ namespace DefinitelyTypedHubs
         {
             var originalSolution = document.Project.Solution;
             var project = document.Project;
+
+            var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
+
             // This method runs a number of successive tasks.
 
             // 1. Build a type mapper that knows what C# types are used
@@ -146,12 +149,12 @@ namespace DefinitelyTypedHubs
             // Figure out the server and client type names:
             var typeName = typeDecl.Identifier.ToString();
 
-            var serverDefinitions = new ServerMethodsGenerator(typeDecl, typeMap);
+            var serverDefinitions = new ServerMethodsGenerator(typeDecl, semanticModel, typeMap);
 
             var serverInterfaceDefn = serverDefinitions.GenerateInterface(typeName, typeMap);
 
             // 3. Generate the interface that includes all client side methods (later).
-            var clientDefinitions = new ClientMethodsGenerator(typeDecl, typeMap);
+            var clientDefinitions = new ClientMethodsGenerator(typeDecl, semanticModel, typeMap);
             var clientInterfaceDefn = clientDefinitions.GenerateInterface(typeName, typeMap);
 
             // 4. Generate the text for all UDTs:

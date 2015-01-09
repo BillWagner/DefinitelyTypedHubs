@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,15 +10,18 @@ namespace DefinitelyTypedHubs.TypeSystem
 {
     public class MethodSignature
     {
-        public MethodSignature(MethodDeclarationSyntax member, TypeMappingDictionary typeMap)
+        public MethodSignature(MethodDeclarationSyntax member, SemanticModel semanticModel, TypeMappingDictionary typeMap)
         {
             MethodName = member.Identifier.ToString();
-            var cSharpReturnType = member.ReturnType.ToString();
+            var returnType = member.ReturnType;
+            var symbol = semanticModel.GetSymbolInfo(returnType);
+
+            var cSharpReturnType = symbol.Symbol.Name;
             var typeScriptName = typeMap.FindOrAdd(cSharpReturnType);
             ReturnType = typeScriptName;
             var parms = member.ParameterList
                 .Parameters
-                .Select(parm => new MethodParameter(parm, typeMap));
+                .Select(parm => new MethodParameter(parm, semanticModel, typeMap));
             ParameterList = parms.ToArray();
         }
         public string MethodName { get; }

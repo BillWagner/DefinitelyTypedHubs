@@ -17,6 +17,10 @@ namespace DefinitelyTypedHubs.TypeSystem
 
         static TypeSystemMappings() 
         {
+            // This is probably the wrong solution.
+            // The better way will be to use the different kinds of 
+            // tokens to know what the user has typed (predefined type, etc)
+
             cache = new Dictionary<string, TypeScriptTypeDefinition>();
             TupleTypesByCount = new List<int>();
             HasDictionary = false;
