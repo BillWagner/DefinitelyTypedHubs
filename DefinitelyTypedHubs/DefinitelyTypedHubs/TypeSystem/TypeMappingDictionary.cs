@@ -53,6 +53,19 @@ namespace DefinitelyTypedHubs.TypeSystem
                 return typeMappings[cSharpTypeName].TypeScriptName;
 
             // TODO:  More must happen here.
+            // Make sure we can find:
+            // 1. nullables
+            // 2. sequence (Array, List, IEnumerable,)
+            // 3. Exception type => string?
+            // 4. Task<T> to Promise<T>
+            // 5. Associative containers to IDictionary (where key is string or number)
+            // 6. Tuples
+
+
+            // User defined:
+            // 7. enumbs
+            // General UDTs
+
             return cSharpTypeName;
         }
     }
