@@ -48,9 +48,21 @@ namespace DefinitelyTypedHubs.TypeSystem
             typeMappings.Add(typeof(DateTimeOffset).Name, new CSharpToTypeScriptMapping(typeof(DateTimeOffset).Name, "string"));
         }
 
+        // TODO:  More must happen here.
+        // Make sure we can find:   
+        // 1. Nullable<T>
+        // 2. sequence (Array, List, IEnumerable,)
+        // 4. Task<T> to Promise<T>
+        // 5. Associative containers to IDictionary (where key is string or number)
+        // 6. Tuples
+
+        // User defined:
+        // 7. enums
+        // General UDTs
+
         public string FindOrAddTypeSyntax(TypeSyntax cSharpType, SemanticModel semanticModel)
         {
-            string typeScriptName;
+            string typeScriptName = "MoreParsingNeeded";
 
             // There's a special case here (well, actually several)
             // 1. If the return type is a nullable<T>, The returnType is 
@@ -59,7 +71,22 @@ namespace DefinitelyTypedHubs.TypeSystem
             // use that type instead, given that it is a nullable)
             // TODO: This will likely need to be refactored again, when I process
             // other generic types that aren't nullables.
-            if (cSharpType is NullableTypeSyntax)
+            if (cSharpType is GenericNameSyntax)
+            {
+                var genericType = cSharpType as GenericNameSyntax;
+                var symbol = semanticModel.GetSymbolInfo(genericType);
+
+                var genericTypeArg = symbol.Symbol.Name;
+
+                // Nullable<T>:
+                if (genericTypeArg == "Nullable")
+                {
+                    var typeArg = genericType.TypeArgumentList.Arguments.First();
+                    var csharpName = semanticModel.GetSymbolInfo(typeArg).Symbol.Name;
+                    typeScriptName = FindOrAddNullable(csharpName);
+                }
+            }
+            else if (cSharpType is NullableTypeSyntax)
             {
                 var nullableReturnType = cSharpType as NullableTypeSyntax;
                 var actualType = nullableReturnType.ElementType;
@@ -91,21 +118,6 @@ namespace DefinitelyTypedHubs.TypeSystem
             // look to see if it's already created:
             if (typeMappings.ContainsKey(cSharpTypeName))
                 return typeMappings[cSharpTypeName].TypeScriptName;
-
-            // TODO:  More must happen here.
-            // Make sure we can find:   
-            // 1. nullables
-            // 2. sequence (Array, List, IEnumerable,)
-            // 3. Exception type => string?
-            // 4. Task<T> to Promise<T>
-            // 5. Associative containers to IDictionary (where key is string or number)
-            // 6. Tuples
-
-
-            // User defined:
-            // 7. enumbs
-            // General UDTs
-
             return "StillMoreParsingToDo";
         }
     }
