@@ -12,11 +12,7 @@ namespace DefinitelyTypedHubs.TypeSystem
     {
         public MethodParameter(ParameterSyntax parm, SemanticModel semanticModel, TypeMappingDictionary typeMap)
         {
-            var symbol = semanticModel.GetSymbolInfo(parm.Type);
-
-            var cSharpType = symbol.Symbol.Name;
-
-            ParameterType = typeMap.FindOrAdd(cSharpType);
+            ParameterType = typeMap.FindOrAddTypeSyntax(parm.Type, semanticModel);
             ParameterName = parm.Identifier.ToString();
         }
         public string ParameterType { get; }

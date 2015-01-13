@@ -14,11 +14,9 @@ namespace DefinitelyTypedHubs.TypeSystem
         {
             MethodName = member.Identifier.ToString();
             var returnType = member.ReturnType;
-            var symbol = semanticModel.GetSymbolInfo(returnType);
+            string typeScriptName;
 
-            var cSharpReturnType = symbol.Symbol.Name;
-            var typeScriptName = typeMap.FindOrAdd(cSharpReturnType);
-            ReturnType = typeScriptName;
+            ReturnType = typeMap.FindOrAddTypeSyntax(returnType, semanticModel);
             var parms = member.ParameterList
                 .Parameters
                 .Select(parm => new MethodParameter(parm, semanticModel, typeMap));

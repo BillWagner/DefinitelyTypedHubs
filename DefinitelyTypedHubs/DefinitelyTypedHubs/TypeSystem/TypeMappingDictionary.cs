@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -46,14 +48,52 @@ namespace DefinitelyTypedHubs.TypeSystem
             typeMappings.Add(typeof(DateTimeOffset).Name, new CSharpToTypeScriptMapping(typeof(DateTimeOffset).Name, "string"));
         }
 
-        public string FindOrAdd(string cSharpTypeName)
+        public string FindOrAddTypeSyntax(TypeSyntax cSharpType, SemanticModel semanticModel)
+        {
+            string typeScriptName;
+
+            // There's a special case here (well, actually several)
+            // 1. If the return type is a nullable<T>, The returnType is 
+            // either a GenericNameSyntax (Nullable<int>), or a NullableTypeSyntax (int?)
+            // In both cases, we want to find the type that is the nullable, and 
+            // use that type instead, given that it is a nullable)
+            // TODO: This will likely need to be refactored again, when I process
+            // other generic types that aren't nullables.
+            if (cSharpType is NullableTypeSyntax)
+            {
+                var nullableReturnType = cSharpType as NullableTypeSyntax;
+                var actualType = nullableReturnType.ElementType;
+                var symbol = semanticModel.GetSymbolInfo(actualType);
+                var cSharpReturnType = symbol.Symbol.Name;
+                typeScriptName = FindOrAddNullable(cSharpReturnType);
+            }
+            else
+            {
+                var symbol = semanticModel.GetSymbolInfo(cSharpType);
+                var cSharpReturnType = symbol.Symbol.Name;
+                typeScriptName = FindOrAdd(cSharpReturnType);
+            }
+            return typeScriptName;
+        }
+
+
+        private string FindOrAddNullable(string cSharpTypeName)
+        {
+            // look to see if it's already created:
+            if (typeMappings.ContainsKey(cSharpTypeName))
+                return typeMappings[cSharpTypeName].TypeScriptName + "?";
+            else
+                return "StillMoreParsingToDo?";
+        }
+
+        private string FindOrAdd(string cSharpTypeName)
         {
             // look to see if it's already created:
             if (typeMappings.ContainsKey(cSharpTypeName))
                 return typeMappings[cSharpTypeName].TypeScriptName;
 
             // TODO:  More must happen here.
-            // Make sure we can find:
+            // Make sure we can find:   
             // 1. nullables
             // 2. sequence (Array, List, IEnumerable,)
             // 3. Exception type => string?
@@ -66,7 +106,7 @@ namespace DefinitelyTypedHubs.TypeSystem
             // 7. enumbs
             // General UDTs
 
-            return cSharpTypeName;
+            return "StillMoreParsingToDo";
         }
     }
 }
