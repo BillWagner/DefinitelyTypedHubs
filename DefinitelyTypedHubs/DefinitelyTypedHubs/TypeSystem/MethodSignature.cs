@@ -14,7 +14,6 @@ namespace DefinitelyTypedHubs.TypeSystem
         {
             MethodName = member.Identifier.ToString();
             var returnType = member.ReturnType;
-            string typeScriptName;
 
             ReturnType = typeMap.FindOrAddTypeSyntax(returnType, semanticModel);
             var parms = member.ParameterList

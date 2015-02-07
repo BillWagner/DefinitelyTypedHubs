@@ -50,15 +50,14 @@ namespace DefinitelyTypedHubs.TypeSystem
 
         // TODO:  More must happen here.
         // Make sure we can find:   
-        // 1. Nullable<T>
-        // 2. sequence (Array, List, IEnumerable,)
-        // 4. Task<T> to Promise<T>
-        // 5. Associative containers to IDictionary (where key is string or number)
-        // 6. Tuples
+        // 1. sequence (Array, List, IEnumerable,)
+        // 2. Task<T> to Promise<T>
+        // 3. Associative containers to IDictionary (where key is string or number)
+        // 4. Tuples
 
         // User defined:
-        // 7. enums
-        // General UDTs
+        // 5. enums
+        // 6. General UDTs
 
         public string FindOrAddTypeSyntax(TypeSyntax cSharpType, SemanticModel semanticModel)
         {
