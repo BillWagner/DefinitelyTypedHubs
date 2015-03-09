@@ -64,11 +64,6 @@ namespace DefinitelyTypedHubs
     internal class DefinitelyTypedHubsCodeRefactoringProvider : CodeRefactoringProvider
     {
         /// <summary>
-        /// This is the name for my refactoring.
-        /// </summary>
-        public const string RefactoringId = "DefinitelyTypedHubs";
-
-        /// <summary>
         /// This method computes what action(s) might be valid here. 
         /// </summary>
         /// <param name="context">

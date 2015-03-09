@@ -15,6 +15,7 @@ namespace DefinitelyTypedHubs.TypeSystem
             MethodName = member.Identifier.ToString();
             var returnType = member.ReturnType;
 
+            // TODO:  TypeScript return types for nullables are simply the non-nullable counterpar.
             ReturnType = typeMap.FindOrAddTypeSyntax(returnType, semanticModel);
             var parms = member.ParameterList
                 .Parameters
